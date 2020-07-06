@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<!-- offerDao의 ref인 dataSource와 dataSource의 id는 일치해야한다 dataSouce bean을 인자로 
+		넘겨준다 -->
+	<!-- DataSource라는 인터페이스를 구현한 것이 BasicDataSource이다.그래서 offerDao에서 인터페이스인 
+		DataSource라고 받아드릴 수 있다 -->
+	<!-- code가 없어서 이런방식으로 bean을 등록해주어야 한다 -->
+	<bean id="dataSource"
+		class="org.apache.commons.dbcp2.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName"
+			value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+
+	<context:property-placeholder
+		location="/WEB-INF/props/jdbc.properties" />
+
+	<!-- XML -> annotation 바꾸기 -->
+	<!-- <bean id="offerDao" class="kr.ac.hansung.csemall.OfferDao"> <property 
+		name="dataSource" ref="dataSource"></property> setter가 불리면서 dataSource가 주입이 
+		되는것을 막는다 </bean> -->
+
+	<!-- 이 부분이 있어야지 annotation이 추가된다 -->
+	<context:annotation-config></context:annotation-config>
+
+	<!-- 어느 패키지를 scan할 것인지 지정해주어야 한다 -> @Repository를 찾아서 bean으로 등록한다 코드가 있어서 
+		@로 bean을 등록 -->
+	<context:component-scan
+		base-package="kr.ac.hansung.cse.dao"></context:component-scan>
+
+	<!-- spring container에 의해서 생성되고 관리된다. singleton으로 객체가 생성된다 -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<property name="packagesToScan">
+			<list>
+				<value>kr.ac.hansung.cse.model</value> <!-- model이라는 패키지를 스캔해서 @Entity를 찾는다 이 클래스를 나중에 테이블로 생성 -->
+			</list>
+		</property>
+
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQL8Dialect</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop> <!-- 항상 시작시 새로 생성해줌, 존재시 drop -> create / update를 하면 기존것 제거 x -->
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.format_sql">false</prop>
+			</props>
+		</property>
+	</bean>
+
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+
+</beans>
